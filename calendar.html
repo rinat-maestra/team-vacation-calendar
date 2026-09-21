@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Days Off Calendar</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #6b7280;
+    --card-bg: #f8f9fb;
+    --border: #e5e7eb;
+    --weekend-bg: #f1f2f4;
+    --today-ring: #111827;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161a;
+      --fg: #edeef0;
+      --muted: #9aa0aa;
+      --card-bg: #1c1f24;
+      --border: #2a2e35;
+      --weekend-bg: #22262d;
+      --today-ring: #f5f5f5;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a;
+    --fg: #edeef0;
+    --muted: #9aa0aa;
+    --card-bg: #1c1f24;
+    --border: #2a2e35;
+    --weekend-bg: #22262d;
+    --today-ring: #f5f5f5;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 20px 16px 40px;
+  }
+  h1 {
+    font-size: 1.3rem;
+    margin: 0 0 4px;
+    font-weight: 700;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 0 0 18px;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    padding: 12px 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(128,128,128,0.35);
+  }
+  .months {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .month-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+  }
+  .month-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .grid7 {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .dow {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: center;
+    padding-bottom: 2px;
+    font-weight: 600;
+  }
+  .day {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 3px;
+    font-size: 0.68rem;
+    background: transparent;
+  }
+  .day.weekend { background: var(--weekend-bg); }
+  .day.empty { visibility: hidden; }
+  .day .num { color: var(--fg); opacity: 0.85; }
+  .day.today .num {
+    box-shadow: 0 0 0 1.5px var(--today-ring);
+    border-radius: 50%;
+    padding: 0 3px;
+  }
+  .dotrow {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+  }
+  .dotrow .mini {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    border: 1px solid rgba(128,128,128,0.4);
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .header-row .legend { flex: 1; }
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .view-select {
+    background: var(--card-bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .table-title {
+    font-size: 1.05rem;
+    margin: 32px 0 12px;
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .status-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .status-name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    margin-bottom: 8px;
+  }
+  .status-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    padding: 2px 0;
+  }
+  .status-label { color: var(--muted); }
+  .status-value { font-weight: 600; }
+  .status-value.ongoing { color: #22c55e; }
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  thead th {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--card-bg);
+    color: var(--muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .person-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .person-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(128,128,128,0.35);
+  }
+  .empty-note {
+    color: var(--muted);
+    font-size: 0.82rem;
+    padding: 14px;
+  }
+  footer.updated {
+    color: var(--muted);
+    font-size: 0.75rem;
+    margin-top: 28px;
+    text-align: center;
+  }
+  @media (max-width: 480px) {
+    .months { grid-template-columns: 1fr 1fr; }
+    .month-card { padding: 8px; }
+    .day { font-size: 0.6rem; }
+  }
+</style>
+</head>
+<body>
+  <h1>Days Off Calendar</h1>
+
+  <div class="header-row">
+    <div class="legend" id="legend"></div>
+    <div class="controls">
+      <select id="teamSelect" class="view-select">
+        <option value="EU" selected>Team: EU</option>
+        <option value="US">Team: US</option>
+        <option value="Integrator">Team: Integrators</option>
+        <option value="Accounting">Team: Accounting</option>
+        <option value="Other">Team: Other</option>
+        <option value="All">Team: All</option>
+      </select>
+      <select id="yearSelect" class="view-select">
+        <option value="2024">Year: 2024</option>
+        <option value="2025">Year: 2025</option>
+        <option value="2026">Year: 2026</option>
+        <option value="2027">Year: 2027</option>
+      </select>
+      <select id="viewMode" class="view-select">
+        <option value="all">All</option>
+        <option value="allVacations">All vacations</option>
+        <option value="coverage" selected>Coverage</option>
+        <option value="noCoverage">No Coverage</option>
+        <option value="noVacations">No Vacations</option>
+      </select>
+    </div>
+  </div>
+  <div class="months" id="months"></div>
+
+  <h2 class="table-title">Vacation Status</h2>
+  <p class="subtitle" style="margin: -4px 0 14px; max-width: 700px;">Reference: two 2-week vacations &asymp; 20 workdays. Only weekdays (Mon&ndash;Fri) are counted.</p>
+  <div class="status-grid" id="statusGrid"></div>
+
+  <h2 class="table-title">Vacation List</h2>
+  <div class="table-wrap">
+    <table id="vacTable">
+      <thead>
+        <tr><th>Person</th><th>Dates</th><th>Weekdays</th></tr>
+      </thead>
+      <tbody id="vacTableBody"></tbody>
+    </table>
+  </div>
+
+  <h2 class="table-title">No Coverage</h2>
+  <div class="table-wrap">
+    <table id="ncTable">
+      <thead>
+        <tr><th>Person</th><th>Dates</th><th>Weekdays</th></tr>
+      </thead>
+      <tbody id="ncTableBody"></tbody>
+    </table>
+  </div>
+
+  <h2 class="table-title">No Vacations</h2>
+  <div class="table-wrap">
+    <table id="nvTable">
+      <thead>
+        <tr><th>Person</th><th>Dates</th><th>Weekdays</th></tr>
+      </thead>
+      <tbody id="nvTableBody"></tbody>
+    </table>
+  </div>
+
+  <footer class="updated">Data refreshed daily from Notion &middot; last regenerated 2026-09-21</footer>
+
+<script>
+// ---------- People / team metadata ----------
+const PEOPLE = {
+  "Alexandra Ryazantseva": { color: "#3b82f6", team: "EU" },
+  "Anna Stepanova":        { color: "#22c55e", team: "EU" },
+  "Sergio Filatov":        { color: "#ef4444", team: "EU" },
+  "Rinat Lukhmanov":       { color: "#a855f7", team: "EU" },
+  "Eugenia Smirnova":      { color: "#f59e0b", team: "EU" },
+  "Konstantin Serov":      { color: "#14b8a6", team: "EU" },
+  "Roman Fedorov":         { color: "#64748b", team: "EU" },
+  "Philipp Volnov":        { color: "#ec4899", team: "US" },
+  "Julia Lo":              { color: "#f97316", team: "US" },
+  "Sasha Haishun":         { color: "#8b5cf6", team: "US" },
+  "Bruno Matumoto":        { color: "#eab308", team: "US" },
+  "Efraim Hermes":         { color: "#d946ef", team: "US" },
+  "Aleksandr Glazkov":     { color: "#06b6d4", team: "Integrator" },
+  "Paul Yukin":            { color: "#84cc16", team: "Integrator" },
+  "Sonya Chesnokova":      { color: "#10b981", team: "Accounting" },
+  "Unknown":               { color: "#9ca3af", team: "Other" }
+};
+const NO_VACATIONS_COLOR = "#ffffff";
+
+// ---------- Raw entries, pulled from the live Notion database (all years) ----------
+const RAW_ENTRIES = [
+  { p: "Alexandra Ryazantseva", s: "2025-01-01", e: "2025-01-11", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2024-09-16", e: "2024-09-28", n: "Vacation" },
+  { p: "Sonya Chesnokova",      s: "2024-10-14", e: "2024-10-30", n: "Vacation" },
+  { p: "Philipp Volnov",        s: "2024-12-23", e: "2025-01-02", n: "Vacation" },
+  { p: "Philipp Volnov",        s: "2024-11-07", e: "2024-11-09", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2025-02-17", e: "2025-02-21", n: "Vacation / Sick Leave / Personal" },
+  { p: "Rinat Lukhmanov",       s: "2025-03-27", e: "2025-04-13", n: "Vacation" },
+  { p: "Rinat Lukhmanov",       s: "2025-11-12", e: "2025-12-01", n: "Vacation" },
+  { p: "Anna Stepanova",        s: "2024-12-27", e: "2025-01-03", n: "Vacation" },
+  { p: "Julia Lo",              s: "2025-04-09", e: "2025-04-18", n: "Vacation / Sick Leave / Personal" },
+  { p: "Philipp Volnov",        s: "2024-10-08", e: "2024-10-08", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2025-09-15", e: "2025-09-26", n: "Vacation" },
+  { p: "Aleksandr Glazkov",     s: "2025-04-18", e: "2025-04-25", n: "Vacation" },
+  { p: "Paul Yukin",            s: "2025-04-28", e: "2025-05-07", n: "Vacation / Sick Leave / Personal" },
+  { p: "Anna Stepanova",        s: "2025-04-15", e: "2025-04-17", n: "Vacation / Sick Leave / Personal" },
+  { p: "Philipp Volnov",        s: "2025-05-24", e: "2025-06-01", n: "Vacation" },
+  { p: "Julia Lo",              s: "2025-07-16", e: "2025-07-22", n: "Vacation" },
+  { p: "Anna Stepanova",        s: "2025-08-01", e: "2025-08-17", n: "Vacation" },
+  { p: "Alexandra Ryazantseva", s: "2025-07-14", e: "2025-07-20", n: "Vacation" },
+  { p: "Anna Stepanova",        s: "2025-10-20", e: "2025-10-24", n: "Vacation" },
+  { p: "Julia Lo",              s: "2025-09-12", e: "2025-09-23", n: "Vacation" },
+  { p: "Paul Yukin",            s: "2025-08-18", e: "2025-08-22", n: "Vacation / Sick Leave / Personal" },
+  { p: "Unknown",               s: "2025-08-06", e: "2025-08-08", n: "Vacation" },
+  { p: "Sergio Filatov",        s: "2024-10-08", e: "2024-10-08", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sergio Filatov",        s: "2025-11-17", e: "2025-11-29", n: "Vacation" },
+  { p: "Paul Yukin",            s: "2025-10-20", e: "2025-11-03", n: "Vacation / Sick Leave / Personal" },
+  { p: "Julia Lo",              s: "2026-05-19", e: "2026-06-03", n: "Vacation" },
+  { p: "Eugenia Smirnova",      s: "2025-12-22", e: "2026-01-01", n: "Vacation" },
+  { p: "Anna Stepanova",        s: "2025-12-29", e: "2025-12-31", n: "Vacation / Sick Leave / Personal" },
+  { p: "Anna Stepanova",        s: "2026-04-06", e: "2026-04-10", n: "Vacation / Sick Leave / Personal" },
+  { p: "Anna Stepanova",        s: "2024-10-08", e: "2024-10-08", n: "Vacation / Sick Leave / Personal" },
+  { p: "Philipp Volnov",        s: "2026-03-25", e: "2026-04-01", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2026-02-23", e: "2026-03-01", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sergio Filatov",        s: "2026-05-11", e: "2026-05-22", n: "Vacation / Sick Leave / Personal" },
+  { p: "Efraim Hermes",         s: "2026-12-20", e: "2027-01-16", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sasha Haishun",         s: "2026-04-13", e: "2026-04-14", n: "Vacation / Sick Leave / Personal" },
+  { p: "Konstantin Serov",      s: "2026-04-20", e: "2026-04-27", n: "Vacation - will be available April 28!" },
+  { p: "Rinat Lukhmanov",       s: "2026-11-02", e: "2026-11-13", n: "Vacation" },
+  { p: "Eugenia Smirnova",      s: "2026-05-29", e: "2026-06-12", n: "Vacation" },
+  { p: "Julia Lo",              s: "2026-04-27", e: "2026-04-27", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2026-06-08", e: "2026-06-20", n: "Vacation" },
+  { p: "Aleksandr Glazkov",     s: "2026-04-16", e: "2026-05-02", n: "Vacation" },
+  { p: "Anna Stepanova",        s: "2026-05-28", e: "2026-05-29", n: "Vacation / Sick Leave / Personal (No Coverage)" },
+  { p: "Anna Stepanova",        s: "2026-07-29", e: "2026-08-14", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2026-10-01", e: "2026-10-17", n: "Vacation" },
+  { p: "Rinat Lukhmanov",       s: "2026-06-17", e: "2026-07-03", n: "Vacation" },
+  { p: "Sasha Haishun",         s: "2026-07-02", e: "2026-07-06", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sasha Haishun",         s: "2026-05-29", e: "2026-05-29", n: "Vacation / Sick Leave / Personal" },
+  { p: "Konstantin Serov",      s: "2026-09-18", e: "2026-09-21", n: "Vacation (No Coverage Needed)" },
+  { p: "Anna Stepanova",        s: "2026-10-26", e: "2026-10-30", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2026-06-22", e: "2026-06-22", n: "Vacation / Sick Leave / Personal" },
+  { p: "Bruno Matumoto",        s: "2026-07-09", e: "2026-07-10", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sonya Chesnokova",      s: "2024-10-08", e: "2024-10-08", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sergio Filatov",        s: "2026-09-17", e: "2026-09-22", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2027-02-22", e: "2027-02-28", n: "Vacation" },
+  { p: "Efraim Hermes",         s: "2026-07-16", e: "2026-07-20", n: "Vacation / Sick Leave / Personal" },
+  { p: "Alexandra Ryazantseva", s: "2026-11-18", e: "2026-12-01", n: "NO VACATIONS" },
+  { p: "Sergio Filatov",        s: "2026-07-27", e: "2026-07-27", n: "Personal (No Coverage)" },
+  { p: "Alexandra Ryazantseva", s: "2026-08-19", e: "2026-08-19", n: "Day off (No Coverage)" },
+  { p: "Rinat Lukhmanov",       s: "2026-09-09", e: "2026-09-11", n: "OOO (No Coverage Needed)" },
+  { p: "Alexandra Ryazantseva", s: "2026-08-10", e: "2026-08-10", n: "day off (No Coverage)" },
+  { p: "Alexandra Ryazantseva", s: "2026-09-07", e: "2026-09-11", n: "NO VACATIONS (eu)" },
+  { p: "Rinat Lukhmanov",       s: "2026-10-30", e: "2026-10-30", n: "Personal (No Coverage)" },
+  { p: "Julia Lo",              s: "2026-07-31", e: "2026-07-31", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sasha Haishun",         s: "2026-08-18", e: "2026-09-04", n: "Vacation / Sick Leave / Personal" },
+  { p: "Julia Lo",              s: "2026-09-21", e: "2026-09-23", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sergio Filatov",        s: "2027-05-17", e: "2027-05-28", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sergio Filatov",        s: "2026-10-19", e: "2026-10-30", n: "Vacation / Sick Leave / Personal" },
+  { p: "Bruno Matumoto",        s: "2026-09-28", e: "2026-09-29", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sergio Filatov",        s: "2027-08-04", e: "2027-08-21", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sergio Filatov",        s: "2026-12-28", e: "2027-01-02", n: "Vacation / Sick Leave / Personal" },
+  { p: "Konstantin Serov",      s: "2026-09-25", e: "2026-09-25", n: "Vacation / Sick Leave / Personal" },
+  { p: "Sasha Haishun",         s: "2026-09-30", e: "2026-10-01", n: "Family / Personal" },
+  { p: "Anna Stepanova",        s: "2026-12-28", e: "2026-12-30", n: "OOO (No Coverage Needed)" },
+  { p: "Anna Stepanova",        s: "2027-04-05", e: "2027-04-09", n: "Vacation / Sick Leave / Personal" }
+];
+
+function classify(name) {
+  const n = name.toLowerCase();
+  if (n.includes("no coverage")) return "noCoverage";
+  if (n.includes("no vacations")) return "noVacations";
+  return "coverage";
+}
+const ENTRIES = RAW_ENTRIES.map(r => ({
+  name: r.p, start: r.s, end: r.e, label: r.n, tag: classify(r.n),
+  color: (PEOPLE[r.p] || PEOPLE["Unknown"]).color,
+  team: (PEOPLE[r.p] || PEOPLE["Unknown"]).team
+}));
+
+// ---------- Date helpers ----------
+function parseDate(s) {
+  const [y,m,d] = s.split("-").map(Number);
+  return new Date(y, m-1, d);
+}
+function toKey(d) {
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function countWeekdaysInYear(startStr, endStr, year) {
+  const s = parseDate(startStr), e = parseDate(endStr);
+  const yStart = new Date(year, 0, 1), yEnd = new Date(year, 11, 31);
+  const clipStart = s < yStart ? yStart : s;
+  const clipEnd = e > yEnd ? yEnd : e;
+  if (clipStart > clipEnd) return 0;
+  let n = 0;
+  for (let d = new Date(clipStart); d <= clipEnd; d.setDate(d.getDate()+1)) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) n++;
+  }
+  return n;
+}
+const monthShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function fmt(dateStr) {
+  const d = parseDate(dateStr);
+  return monthShort[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
+}
+const TODAY = new Date();
+TODAY.setHours(0, 0, 0, 0);
+function daysBetween(d1, d2) {
+  return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
+// ---------- DOM refs ----------
+const monthsEl = document.getElementById("months");
+const legendEl = document.getElementById("legend");
+const statusGrid = document.getElementById("statusGrid");
+const vacBody = document.getElementById("vacTableBody");
+const ncBody = document.getElementById("ncTableBody");
+const nvBody = document.getElementById("nvTableBody");
+const teamSelect = document.getElementById("teamSelect");
+const yearSelect = document.getElementById("yearSelect");
+const viewModeSelect = document.getElementById("viewMode");
+const dowLabels = ["M","T","W","T","F","S","S"];
+
+function peopleInTeam(team) {
+  return Object.keys(PEOPLE).filter(name => team === "All" || PEOPLE[name].team === team);
+}
+
+function addRangeToMap(map, start, end, color) {
+  const s = parseDate(start), e = parseDate(end);
+  for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1)) {
+    const key = toKey(d);
+    if (!map[key]) map[key] = [];
+    map[key].push(color);
+  }
+}
+
+function buildDayMap(team, mode) {
+  const map = {};
+  const names = new Set(peopleInTeam(team));
+  const includeCoverage = mode === "all" || mode === "allVacations" || mode === "coverage";
+  const includeNoCoverage = mode === "all" || mode === "allVacations" || mode === "noCoverage";
+  const includeNoVacations = mode === "all" || mode === "noVacations";
+  ENTRIES.forEach(en => {
+    if (!names.has(en.name)) return;
+    if (en.tag === "coverage" && includeCoverage) addRangeToMap(map, en.start, en.end, en.color);
+    else if (en.tag === "noCoverage" && includeNoCoverage) addRangeToMap(map, en.start, en.end, en.color);
+    else if (en.tag === "noVacations" && includeNoVacations) addRangeToMap(map, en.start, en.end, NO_VACATIONS_COLOR);
+  });
+  return map;
+}
+
+function renderCalendar(team, year, mode) {
+  const dayMap = buildDayMap(team, mode);
+  const todayKey = toKey(TODAY);
+  monthsEl.innerHTML = "";
+  for (let mo = 0; mo < 12; mo++) {
+    const card = document.createElement("div");
+    card.className = "month-card";
+    const title = document.createElement("div");
+    title.className = "month-title";
+    title.textContent = monthNames[mo] + " " + year;
+    card.appendChild(title);
+
+    const grid = document.createElement("div");
+    grid.className = "grid7";
+    dowLabels.forEach(l => {
+      const el = document.createElement("div");
+      el.className = "dow";
+      el.textContent = l;
+      grid.appendChild(el);
+    });
+
+    const firstDay = new Date(year, mo, 1);
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, mo+1, 0).getDate();
+
+    for (let i=0; i<startOffset; i++) {
+      const el = document.createElement("div");
+      el.className = "day empty";
+      grid.appendChild(el);
+    }
+    for (let d=1; d<=daysInMonth; d++) {
+      const date = new Date(year, mo, d);
+      const dow = date.getDay();
+      const key = toKey(date);
+      const el = document.createElement("div");
+      el.className = "day" + ((dow===0||dow===6) ? " weekend" : "") + (key===todayKey ? " today" : "");
+      const num = document.createElement("div");
+      num.className = "num";
+      num.textContent = d;
+      el.appendChild(num);
+      if (dayMap[key]) {
+        const row = document.createElement("div");
+        row.className = "dotrow";
+        dayMap[key].forEach(c => {
+          const dot = document.createElement("div");
+          dot.className = "mini";
+          dot.style.background = c;
+          row.appendChild(dot);
+        });
+        el.appendChild(row);
+      }
+      grid.appendChild(el);
+    }
+    card.appendChild(grid);
+    monthsEl.appendChild(card);
+  }
+}
+
+function renderLegend(team) {
+  legendEl.innerHTML = "";
+  peopleInTeam(team).forEach(name => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="dot" style="background:${PEOPLE[name].color}"></span>${name}`;
+    legendEl.appendChild(item);
+  });
+  const nvItem = document.createElement("div");
+  nvItem.className = "legend-item";
+  nvItem.innerHTML = `<span class="dot" style="background:${NO_VACATIONS_COLOR}"></span>No Vacations`;
+  legendEl.appendChild(nvItem);
+}
+
+function renderStatus(team, year) {
+  statusGrid.innerHTML = "";
+  peopleInTeam(team).forEach(name => {
+    const personEntries = ENTRIES.filter(en => en.name === name && en.tag === "coverage");
+    let lastEnd = null, nextStart = null, ongoingEnd = null;
+    personEntries.forEach(en => {
+      const sd = parseDate(en.start), ed = parseDate(en.end);
+      if (sd <= TODAY && TODAY <= ed) { ongoingEnd = ed; }
+      else if (ed < TODAY) { if (!lastEnd || ed > lastEnd) lastEnd = ed; }
+      else if (sd > TODAY) { if (!nextStart || sd < nextStart) nextStart = sd; }
+    });
+    const totalThisYear = personEntries.reduce((sum, en) => sum + countWeekdaysInYear(en.start, en.end, year), 0);
+
+    const card = document.createElement("div");
+    card.className = "status-card";
+    let html = `<div class="status-name"><span class="dot" style="background:${PEOPLE[name].color}"></span>${name}</div>`;
+    if (ongoingEnd) {
+      const daysLeft = daysBetween(TODAY, ongoingEnd);
+      html += `<div class="status-row"><span class="status-label">Status</span><span class="status-value ongoing">On vacation (back in ${daysLeft}d)</span></div>`;
+    }
+    html += `<div class="status-row"><span class="status-label">Total ${year}</span><span class="status-value">${totalThisYear}d</span></div>`;
+    html += `<div class="status-row"><span class="status-label">Last vacation</span><span class="status-value">${lastEnd ? daysBetween(lastEnd, TODAY) + "d ago" : "—"}</span></div>`;
+    html += `<div class="status-row"><span class="status-label">Next planned</span><span class="status-value">${nextStart ? "in " + daysBetween(TODAY, nextStart) + "d" : "none planned"}</span></div>`;
+    card.innerHTML = html;
+    statusGrid.appendChild(card);
+  });
+}
+
+function fillTable(tbody, rows) {
+  tbody.innerHTML = "";
+  if (rows.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    td.className = "empty-note";
+    td.textContent = "No entries for this selection.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+  rows.sort((a,b) => parseDate(a.start) - parseDate(b.start));
+  rows.forEach(en => {
+    const tr = document.createElement("tr");
+    const dateLabel = en.start === en.end ? fmt(en.start) : (fmt(en.start) + " → " + fmt(en.end));
+    const wd = countWeekdaysInYear(en.start, en.end, en._year);
+    tr.innerHTML = `
+      <td><div class="person-cell"><span class="person-dot" style="background:${en.color}"></span>${en.name}</div></td>
+      <td>${dateLabel}</td>
+      <td>${wd}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTables(team, year) {
+  const names = new Set(peopleInTeam(team));
+  const inYear = en => {
+    const s = parseDate(en.start), e = parseDate(en.end);
+    return s.getFullYear() === year || e.getFullYear() === year;
+  };
+  const withYear = arr => arr.map(en => Object.assign({}, en, { _year: year }));
+
+  fillTable(vacBody, withYear(ENTRIES.filter(en => names.has(en.name) && en.tag === "coverage" && inYear(en))));
+  fillTable(ncBody, withYear(ENTRIES.filter(en => names.has(en.name) && en.tag === "noCoverage" && inYear(en))));
+  fillTable(nvBody, withYear(ENTRIES.filter(en => names.has(en.name) && en.tag === "noVacations" && inYear(en))));
+}
+
+function renderAll() {
+  const team = teamSelect.value;
+  const year = parseInt(yearSelect.value, 10);
+  const mode = viewModeSelect.value;
+  renderLegend(team);
+  renderCalendar(team, year, mode);
+  renderStatus(team, year);
+  renderTables(team, year);
+}
+
+teamSelect.addEventListener("change", renderAll);
+yearSelect.addEventListener("change", renderAll);
+viewModeSelect.addEventListener("change", renderAll);
+
+(function initYear() {
+  const currentYear = TODAY.getFullYear();
+  const opt = yearSelect.querySelector(`option[value="${currentYear}"]`);
+  if (opt) opt.selected = true;
+})();
+
+renderAll();
+</script>
+</body>
+</html>
