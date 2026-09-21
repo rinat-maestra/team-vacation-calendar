@@ -47,8 +47,14 @@
   }
   h1 {
     font-size: 1.3rem;
-    margin: 0 0 4px;
+    margin: 0;
     font-weight: 700;
+  }
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
   }
   .subtitle {
     color: var(--muted);
@@ -170,6 +176,20 @@
     font-family: inherit;
     cursor: pointer;
   }
+  .theme-toggle {
+    background: var(--card-bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
   .table-title {
     font-size: 1.05rem;
     margin: 32px 0 12px;
@@ -259,7 +279,10 @@
 </style>
 </head>
 <body>
-  <h1>Days Off Calendar</h1>
+  <div class="title-row">
+    <h1>Days Off Calendar</h1>
+    <button id="themeToggle" class="theme-toggle" type="button" title="Toggle light / dark theme" aria-label="Toggle light / dark theme">&#9680;</button>
+  </div>
 
   <div class="header-row">
     <div class="legend" id="legend"></div>
@@ -481,7 +504,33 @@ const nvBody = document.getElementById("nvTableBody");
 const teamSelect = document.getElementById("teamSelect");
 const yearSelect = document.getElementById("yearSelect");
 const viewModeSelect = document.getElementById("viewMode");
+const themeToggle = document.getElementById("themeToggle");
 const dowLabels = ["M","T","W","T","F","S","S"];
+
+// ---------- Theme toggle ----------
+function applyTheme(theme) {
+  if (theme === "light" || theme === "dark") {
+    document.documentElement.setAttribute("data-theme", theme);
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  themeToggle.textContent = theme === "light" ? "☀" : "☾";
+}
+function currentEffectiveTheme() {
+  const explicit = document.documentElement.getAttribute("data-theme");
+  if (explicit) return explicit;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+(function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem("calendarTheme"); } catch (e) {}
+  applyTheme(saved || currentEffectiveTheme());
+})();
+themeToggle.addEventListener("click", () => {
+  const next = currentEffectiveTheme() === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("calendarTheme", next); } catch (e) {}
+});
 
 function peopleInTeam(team) {
   return Object.keys(PEOPLE).filter(name => team === "All" || PEOPLE[name].team === team);
