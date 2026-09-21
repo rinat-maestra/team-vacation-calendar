@@ -320,7 +320,7 @@
   <div class="table-wrap">
     <table id="vacTable">
       <thead>
-        <tr><th>Person</th><th>Name</th><th>Status</th><th>Dates</th><th>Weekdays</th></tr>
+        <tr><th>Person</th><th>Name</th><th>Dates</th><th>Weekdays</th><th>Status</th></tr>
       </thead>
       <tbody id="vacTableBody"></tbody>
     </table>
@@ -330,7 +330,7 @@
   <div class="table-wrap">
     <table id="ncTable">
       <thead>
-        <tr><th>Person</th><th>Name</th><th>Status</th><th>Dates</th><th>Weekdays</th></tr>
+        <tr><th>Person</th><th>Name</th><th>Dates</th><th>Weekdays</th><th>Status</th></tr>
       </thead>
       <tbody id="ncTableBody"></tbody>
     </table>
@@ -340,7 +340,7 @@
   <div class="table-wrap">
     <table id="nvTable">
       <thead>
-        <tr><th>Name</th><th>Status</th><th>Dates</th><th>Weekdays</th></tr>
+        <tr><th>Name</th><th>Dates</th><th>Weekdays</th><th>Status</th></tr>
       </thead>
       <tbody id="nvTableBody"></tbody>
     </table>
@@ -684,9 +684,9 @@ function fillTable(tbody, rows, showPerson) {
     tr.innerHTML = `
       ${personCell}
       <td>${en.label}</td>
-      <td>${en.status}</td>
       <td>${dateLabel}</td>
       <td>${wd}</td>
+      <td>${en.status}</td>
     `;
     tbody.appendChild(tr);
   });
